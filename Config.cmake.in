@@ -1,0 +1,6 @@
+@PACKAGE_INIT@
+
+include ( "${CMAKE_CURRENT_LIST_DIR}/epoll_wrapper.cmake" )
+    
+set(EPOLL_WRAPPER_INCLUDE_DIRS @CMAKE_INSTALL_PREFIX@/include)
+set(EPOLL_WRAPPER_LIBRARIES epoll_wrapper)
