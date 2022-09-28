@@ -7,5 +7,6 @@
 
 namespace epoll_wrapper
 {
-    using Epoll = EpollImpl<Light>;
+    template <typename FdType>
+    using Epoll = EpollImpl<Light, FdType>;
 }

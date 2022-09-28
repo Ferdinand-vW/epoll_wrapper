@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <epoll_wrapper/EpollImpl.h>
 #include <exception>
 #include <iostream>
 #include <optional>
@@ -19,39 +20,56 @@
 namespace epoll_wrapper
 {
 
-    template <typename EpollType>
-    EpollImpl<EpollType>::EpollImpl(std::unique_ptr<EpollType>&& epoll) : mEpoll(std::move(epoll)) {}
+    template <typename EpollType, typename FdType>
+    bool CreateAction<EpollType, FdType>::hasError()
+    {
+        return mErrc != ErrorCode::None;
+    }
 
-    template <typename EpollType>
-    CreateAction<EpollType> EpollImpl<EpollType>::epollCreate()
+    bool CtlAction::hasError()
+    {
+        return mErrc != ErrorCode::None;
+    }
+
+    template <typename FdType>
+    bool WaitAction<FdType>::haError()
+    {
+        return mErrc != ErrorCode::None;
+    }
+
+    template <typename EpollType, typename FdType>
+    EpollImpl<EpollType, FdType>::EpollImpl(std::unique_ptr<EpollType>&& epoll) : mEpoll(std::move(epoll)) {}
+
+    template <typename EpollType, typename FdType>
+    CreateAction<EpollType, FdType> EpollImpl<EpollType, FdType>::epollCreate()
     {
         auto epollFd = EpollType::epoll_create(1);
 
         if (epollFd)
         {
-            return CreateAction<EpollType>{
-                std::unique_ptr<EpollImpl<EpollType>>(
-                    new EpollImpl<EpollType>(std::move(epollFd)))
+            return CreateAction<EpollType, FdType>{
+                std::unique_ptr<EpollImpl<EpollType, FdType>>(
+                    new EpollImpl<EpollType, FdType>(std::move(epollFd)))
                 , ErrorCode::None};
         }
 
         return {};
     }
 
-    template <typename EpollType>
-    EpollImpl<EpollType>::~EpollImpl()
+    template <typename EpollType, typename FdType>
+    EpollImpl<EpollType, FdType>::~EpollImpl()
     {
         this->close();
     }
 
-    template <typename EpollType>
-    void EpollImpl<EpollType>::close()
+    template <typename EpollType, typename FdType>
+    void EpollImpl<EpollType, FdType>::close()
     {
         mEpoll->close();
     }
 
-    template <typename EpollType>
-    WaitAction EpollImpl<EpollType>::wait(uint32_t timeout)
+    template <typename EpollType, typename FdType>
+    WaitAction<FdType> EpollImpl<EpollType, FdType>::wait(uint32_t timeout)
     {
         struct epoll_event events[MAXEVENTS];
         auto resultCode = mEpoll->epoll_wait(events, MAXEVENTS, timeout);
@@ -67,14 +85,13 @@ namespace epoll_wrapper
         }
 
         
-        return WaitAction{eventVector, ErrorCode::None};
+        return WaitAction<FdType>{eventVector, ErrorCode::None};
     }
 
-    template <typename EpollType>
-    template <typename FdType>
-    CtlAction EpollImpl<EpollType>::add(const std::unique_ptr<FdType>& fd_ptr, EventCodes eventc)
+    template <typename EpollType, typename FdType>
+    CtlAction EpollImpl<EpollType, FdType>::add(const FdType& fdObj, EventCodes eventc)
     {
-        auto fd = fd_ptr->getFileDescriptor();
+        auto fd = fdObj.getFileDescriptor();
         
         struct epoll_event event;
         event.events = fromEvent(eventc);
@@ -84,19 +101,19 @@ namespace epoll_wrapper
 
         if (res == 0)
         {
-            mFds.insert({fd, eventc});
+            mRegisteredEvents.insert({fd, eventc});
+            mRegisteredFds.insert({fd, fdObj});
         }
 
         return CtlAction{fromEpollError(res)};
     }
 
-    template <typename EpollType>
-    template <typename FdType>
-    CtlAction EpollImpl<EpollType>::mod(const std::unique_ptr<FdType>& fd_ptr, EventCodes eventc)
+    template <typename EpollType, typename FdType>
+    CtlAction EpollImpl<EpollType, FdType>::mod(const FdType& fdObj, EventCodes eventc)
     {
-        auto fd = fd_ptr->getFileDescriptor();
+        auto fd = fdObj.getFileDescriptor();
 
-        if (mFds.find(fd) == mFds.end())
+        if (mRegisteredFds.find(fd) == mRegisteredFds.end())
         {
             return CtlAction{ErrorCode::EnoEnt};
         }
@@ -109,42 +126,41 @@ namespace epoll_wrapper
 
         if (res == 0)
         {
-            mFds[fd] = eventc;
+            mRegisteredEvents[fd] = eventc;
         }
 
         return CtlAction{fromEpollError(res)};
     }
 
-    template <typename EpollType>
-    template <typename FdType>
-    CtlAction EpollImpl<EpollType>::erase(const std::unique_ptr<FdType>& fd_ptr)
+    template <typename EpollType, typename FdType>
+    CtlAction EpollImpl<EpollType, FdType>::erase(const FdType& fdObj)
     {
-        auto fd = fd_ptr->getFileDescriptor();
+        auto fd = fdObj.getFileDescriptor();
 
         struct epoll_event event;
         auto res = mEpoll->epoll_ctl(EPOLL_CTL_DEL, fd, &event);
 
         if (res == 0)
         {
-            mFds.erase(fd);
+            mRegisteredEvents.erase(fd);
+            mRegisteredFds.erase(fd);
         }
 
         return CtlAction{fromEpollError(res)};
     }
         
-    template <typename EpollType>
-    const std::unique_ptr<EpollType>& EpollImpl<EpollType>::getUnderlying() const
+    template <typename EpollType, typename FdType>
+    const std::unique_ptr<EpollType>& EpollImpl<EpollType, FdType>::getUnderlying() const
     {
         return mEpoll;
     }
 
-    template <typename EpollType>
-    template <typename FdType>
-    const EventCodes EpollImpl<EpollType>::getEvents(const std::unique_ptr<FdType> &fd_ptr) const
+    template <typename EpollType, typename FdType>
+    const EventCodes EpollImpl<EpollType, FdType>::getEvents(const FdType& fdObj) const
     {
-        auto it  = mFds.find(fd_ptr->getFileDescriptor());
+        auto it  = mRegisteredEvents.find(fdObj->getFileDescriptor());
 
-        if (it != mFds.end())
+        if (it != mRegisteredEvents.end())
         {
             return it->second;
         }

@@ -53,6 +53,7 @@ namespace epoll_wrapper
         EventCodes mCodes;
         ErrorCode mError{ErrorCode::None};
         epoll_data_t mData;
+        uint32_t mFd;
     };
 
     int fromEvent(const EventCodes& events);
