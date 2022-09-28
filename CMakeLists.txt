@@ -5,7 +5,9 @@ project(epoll_wrapper VERSION 1.0)
 set(CMAKE_CXX_STANDARD 17)
 include(GNUInstallDirs)
 
-add_subdirectory(include)
+set(EPOLL_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
+
+add_subdirectory(${EPOLL_INCLUDE_DIR})
 add_subdirectory(src)
 
 enable_testing ()

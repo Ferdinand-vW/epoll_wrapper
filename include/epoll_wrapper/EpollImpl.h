@@ -74,6 +74,8 @@ namespace epoll_wrapper
         void close();
 
         const std::unique_ptr<EpollType>& getUnderlying() const;
+        bool hasFd(uint32_t fd) const;
+        const FdType& getFd(uint32_t fd) const;
         const EventCodes getEvents(const FdType &fd) const;
         
     private:

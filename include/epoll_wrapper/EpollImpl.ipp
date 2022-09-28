@@ -15,7 +15,9 @@
 #include <ostream>
 #include <stdexcept>
 #include <sys/epoll.h>
+#include <sys/types.h>
 #include <unistd.h>
+#include <unordered_set>
 
 namespace epoll_wrapper
 {
@@ -74,13 +76,19 @@ namespace epoll_wrapper
         struct epoll_event events[MAXEVENTS];
         auto resultCode = mEpoll->epoll_wait(events, MAXEVENTS, timeout);
 
-        std::vector<Event> eventVector;
+        std::vector<std::pair<const FdType&, Event>> eventVector;
         int i = 0;
 
         while (i < resultCode)
         {
             Event ev{fromEpollEvent(events[i].events), fromEpollError(resultCode), std::move(events[i].data)};
-            eventVector.emplace_back(std::move(ev));
+            
+            if (auto it = mRegisteredFds.find(events[i].data.fd); it != mRegisteredFds.end())
+            {
+                std::pair<const FdType&, Event> p = {it->second, std::move(ev)};
+                eventVector.emplace_back(p);
+            }
+            
             ++i;
         }
 
@@ -156,15 +164,34 @@ namespace epoll_wrapper
     }
 
     template <typename EpollType, typename FdType>
+    bool EpollImpl<EpollType, FdType>::hasFd(uint32_t fd) const
+    {
+        return mRegisteredFds.find(fd) != mRegisteredFds.end();
+    }
+
+    template <typename EpollType, typename FdType>
+    const FdType& EpollImpl<EpollType, FdType>::getFd(uint32_t fd) const
+    {
+        auto it = mRegisteredFds.find(fd);
+
+        if (it != mRegisteredFds.end())
+        {
+            return it->second;
+        }
+
+        return {};
+    }
+    
+    template <typename EpollType, typename FdType>
     const EventCodes EpollImpl<EpollType, FdType>::getEvents(const FdType& fdObj) const
     {
-        auto it  = mRegisteredEvents.find(fdObj->getFileDescriptor());
+        auto it  = mRegisteredEvents.find(fdObj.getFileDescriptor());
 
         if (it != mRegisteredEvents.end())
         {
             return it->second;
         }
 
-        return EventCodes({});
+        return EventCodes(std::unordered_set<EventCode>{});
     }
 }
