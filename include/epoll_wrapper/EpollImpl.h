@@ -14,14 +14,11 @@
 
 namespace epoll_wrapper
 {
-    template<typename EpollType, typename FdType>
-    class EpollImpl;
-
-    template <typename EpollType, typename FdType>
+    template <typename Epoll>
     class CreateAction
     {
         public:
-            CreateAction(std::unique_ptr<EpollImpl<EpollType, FdType>> epoll, ErrorCode errc);
+            CreateAction(std::unique_ptr<Epoll> epoll, ErrorCode errc);
 
             operator bool() const;
 
@@ -29,12 +26,12 @@ namespace epoll_wrapper
 
             bool hasError() const;
 
-            EpollImpl<EpollType, FdType>& getEpoll();
-            const EpollImpl<EpollType, FdType>& getEpoll() const;
+            Epoll& getEpoll();
+            const Epoll& getEpoll() const;
 
         private:
 
-        std::unique_ptr<EpollImpl<EpollType, FdType>> mEpoll; 
+        std::unique_ptr<Epoll> mEpoll; 
         ErrorCode mErrc;
     };
 
@@ -73,10 +70,7 @@ namespace epoll_wrapper
     {
         
     public:
-        static CreateAction<EpollType, FdType> epollCreate();
-
-        // ~EpollImpl();
-        // EpollImpl(EpollImpl&&);
+        static CreateAction<EpollImpl<EpollType, FdType>> epollCreate();
 
         EpollImpl(const EpollImpl&) = delete;
         EpollImpl& operator=(const EpollImpl&) = delete;

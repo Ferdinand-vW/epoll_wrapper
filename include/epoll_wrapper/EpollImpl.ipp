@@ -23,36 +23,36 @@
 namespace epoll_wrapper
 {
 
-    template <typename EpollType, typename FdType>
-    CreateAction<EpollType, FdType>::CreateAction(std::unique_ptr<EpollImpl<EpollType, FdType>> epoll, ErrorCode errc)
+    template <typename Epoll>
+    CreateAction<Epoll>::CreateAction(std::unique_ptr<Epoll> epoll, ErrorCode errc)
     : mEpoll(std::move(epoll)), mErrc(errc) {};
 
-    template <typename EpollType, typename FdType>
-    bool CreateAction<EpollType, FdType>::hasError() const
+    template <typename Epoll>
+    bool CreateAction<Epoll>::hasError() const
     {
         return mErrc != ErrorCode::None;
     }
 
-    template <typename EpollType, typename FdType>
-    CreateAction<EpollType, FdType>::operator bool() const
+    template <typename Epoll>
+    CreateAction<Epoll>::operator bool() const
     {
         return !hasError();
     }
 
-    template <typename EpollType, typename FdType>
-    ErrorCode CreateAction<EpollType, FdType>::getError() const
+    template <typename Epoll>
+    ErrorCode CreateAction<Epoll>::getError() const
     {
         return mErrc;
     }
 
-    template <typename EpollType, typename FdType>
-    EpollImpl<EpollType, FdType>& CreateAction<EpollType, FdType>::getEpoll()
+    template <typename Epoll>
+    Epoll& CreateAction<Epoll>::getEpoll()
     {
         return *mEpoll;
     }
 
-    template <typename EpollType, typename FdType>
-    const EpollImpl<EpollType, FdType>& CreateAction<EpollType, FdType>::getEpoll() const
+    template <typename Epoll>
+    const Epoll& CreateAction<Epoll>::getEpoll() const
     {
         return *mEpoll;
     }
@@ -95,36 +95,20 @@ namespace epoll_wrapper
     EpollImpl<EpollType, FdType>::EpollImpl(std::unique_ptr<EpollType> epoll) : mEpoll(std::move(epoll)) {}
 
     template <typename EpollType, typename FdType>
-    CreateAction<EpollType, FdType> EpollImpl<EpollType, FdType>::epollCreate()
+    CreateAction<EpollImpl<EpollType, FdType>> EpollImpl<EpollType, FdType>::epollCreate()
     {
+        using Epoll = EpollImpl<EpollType, FdType>;
         auto epollFd = EpollType::epoll_create(1);
 
         if (epollFd)
         {
-            return CreateAction<EpollType, FdType>
-                (std::unique_ptr<EpollImpl<EpollType, FdType>>(new EpollImpl(std::move(epollFd)))
+            return CreateAction<Epoll>
+                (std::unique_ptr<Epoll>(new EpollImpl(std::move(epollFd)))
                 , ErrorCode::None);
         }
 
-        return CreateAction<EpollType, FdType>(nullptr, ErrorCode::Unknown);
+        return CreateAction<Epoll>(nullptr, ErrorCode::Unknown);
     }
-
-    // template <typename EpollType, typename FdType>
-    // EpollImpl<EpollType, FdType>::EpollImpl(EpollImpl<EpollType, FdType>&& epoll)
-    //     : mEpoll(epoll.mEpoll)
-    //     , mRegisteredFds(std::move(epoll.mRegisteredFds))
-    //     , mRegisteredEvents(std::move(epoll.mRegisteredEvents))
-    //     , mTimeout(epoll.mTimeout) 
-    // {
-    //     *mEvents = *epoll.mEvents;
-    // }
-
-    // template <typename EpollType, typename FdType>
-    // EpollImpl<EpollType, FdType>::~EpollImpl()
-    // {
-    //     this->close();
-    //     mEpoll.reset();
-    // }
 
     template <typename EpollType, typename FdType>
     void EpollImpl<EpollType, FdType>::close()
