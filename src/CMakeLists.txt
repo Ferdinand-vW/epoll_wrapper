@@ -5,4 +5,4 @@ set(SOURCES epoll_wrapper/Error.cpp
             epoll_wrapper/Event.cpp
             epoll_wrapper/Light.cpp)
 
-add_library(epoll_wrapper_lib ${SOURCES})
+add_library(epoll_wrapper ${SOURCES})

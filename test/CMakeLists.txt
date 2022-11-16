@@ -15,7 +15,7 @@ add_executable(
     testEpoll.cpp
 )
 
-target_link_libraries(testEpoll gtest_main gmock_main epoll_wrapper_lib)
+target_link_libraries(testEpoll gtest_main gmock_main epoll_wrapper)
 message(${EPOLL_INCLUDE_DIR})
 target_include_directories(testEpoll PUBLIC ${EPOLL_INCLUDE_DIR})
 

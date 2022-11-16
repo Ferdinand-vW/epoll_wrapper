@@ -15,19 +15,19 @@ add_subdirectory(test)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG")
 
-target_include_directories(epoll_wrapper_lib 
+target_include_directories(epoll_wrapper 
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
     )
 
 install(
-    TARGETS epoll_wrapper_lib
-    EXPORT epoll_wrapper
+    TARGETS epoll_wrapper
+    EXPORT epoll_wrapper_export
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-install(EXPORT epoll_wrapper
+install(EXPORT epoll_wrapper_export
     FILE epoll_wrapper.cmake
     DESTINATION lib/cmake/epoll_wrapper)
 
@@ -52,6 +52,6 @@ install(FILES
   DESTINATION lib/cmake/epoll_wrapper
   )
 
-export(EXPORT epoll_wrapper
+export(EXPORT epoll_wrapper_export
   FILE "${CMAKE_CURRENT_BINARY_DIR}/epoll_wrapper.cmake"
 )

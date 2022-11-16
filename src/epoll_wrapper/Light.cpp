@@ -1,6 +1,7 @@
 #include "epoll_wrapper/Light.h"
 
 #include <memory>
+#include <optional>
 #include <sys/epoll.h>
 #include <unistd.h>
 

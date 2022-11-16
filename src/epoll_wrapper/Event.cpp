@@ -82,7 +82,9 @@ namespace epoll_wrapper
                 return EPOLLEXCLUSIVE;
             case EventCode::None:
                 return 0;
-            }
+        }
+
+        return 0;
     }
 
     EventCodes::EventCodes(EventCode ec) : mCodes({ec}) {}

@@ -18,38 +18,54 @@ namespace epoll_wrapper
     class EpollImpl;
 
     template <typename EpollType, typename FdType>
-    struct CreateAction
+    class CreateAction
     {
+        public:
+            CreateAction(std::unique_ptr<EpollImpl<EpollType, FdType>> epoll, ErrorCode errc);
+
+            operator bool() const;
+
+            ErrorCode getError() const;
+
+            bool hasError() const;
+
+            EpollImpl<EpollType, FdType>& getEpoll();
+            const EpollImpl<EpollType, FdType>& getEpoll() const;
+
+        private:
+
         std::unique_ptr<EpollImpl<EpollType, FdType>> mEpoll; 
         ErrorCode mErrc;
-
-        EpollImpl<EpollType, FdType>* operator->()
-        {
-            return mEpoll.get();
-        }
-
-        bool hasError();
     };
 
-    struct CtlAction
+    class CtlAction
     {
-        ErrorCode mErrc;
+        public:
+            CtlAction(ErrorCode errc);
 
-        bool hasError();
+            bool hasError() const;
+
+            ErrorCode getError() const;
+
+        private:
+            ErrorCode mErrc;
     };
 
     template <typename FdType>
-    struct WaitAction
+    class WaitAction
     {
-        std::vector<std::pair<const FdType&, Event>> mEvents;
-        ErrorCode mErrc;
+        public:
+            WaitAction(std::vector<std::pair<const FdType&, Event>>&&, ErrorCode);
 
-        std::vector<std::pair<const FdType&, Event>>* operator->()
-        {
-            return &mEvents;
-        }
+            const std::vector<std::pair<const FdType&, Event>>& getEvents() const;
 
-        bool haError();
+            bool hasError() const;
+
+            ErrorCode getError() const;
+
+        private:
+            std::vector<std::pair<const FdType&, Event>> mEvents;
+            ErrorCode mErrc;
     };
 
     template <typename EpollType, typename FdType>
@@ -59,10 +75,10 @@ namespace epoll_wrapper
     public:
         static CreateAction<EpollType, FdType> epollCreate();
 
-        ~EpollImpl();
+        // ~EpollImpl();
+        // EpollImpl(EpollImpl&&);
 
         EpollImpl(const EpollImpl&) = delete;
-        EpollImpl(EpollImpl&&) = delete;
         EpollImpl& operator=(const EpollImpl&) = delete;
         EpollImpl& operator=(EpollImpl&&) = delete;
 
@@ -73,7 +89,7 @@ namespace epoll_wrapper
         CtlAction erase(const FdType& fd);
         void close();
 
-        const std::unique_ptr<EpollType>& getUnderlying() const;
+        const EpollType& getUnderlying() const;
         bool hasFd(uint32_t fd) const;
         const FdType& getFd(uint32_t fd) const;
         const EventCodes getEvents(const FdType &fd) const;
@@ -89,6 +105,6 @@ namespace epoll_wrapper
 
         std::unique_ptr<EpollType> mEpoll;
 
-        EpollImpl(std::unique_ptr<EpollType>&& epollfd);
+        EpollImpl(std::unique_ptr<EpollType> epoll);
 };
 }

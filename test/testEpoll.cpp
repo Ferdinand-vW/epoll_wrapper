@@ -28,6 +28,7 @@ struct MockEpoll
     {
         return std::make_unique<MockEpoll>();
     }
+
 };
 
 struct Fd
@@ -53,43 +54,52 @@ void write_to_pipe (int fd, std::string text)
 
 TEST(EPOLL, create_delete)
 {
-    auto epollRes = EpollImpl<Light, int>::epollCreate();
+    auto createEpoll = EpollImpl<Light, int>::epollCreate();
 
-    ASSERT_EQ(epollRes.mErrc, ErrorCode::None);
+    ASSERT_EQ(createEpoll.getError(), ErrorCode::None);
+    ASSERT_TRUE(createEpoll);
 
-    EXPECT_NO_THROW((void)epollRes.mEpoll.release());
+    auto &epoll = createEpoll.getEpoll();
+
+    EXPECT_NO_THROW(epoll.close());
 }
 
 TEST(EPOLL, add_and_remove_listener)
 {
-    auto epoll = EpollImpl<Light, Fd>::epollCreate();
+    auto createEpoll = EpollImpl<Light, Fd>::epollCreate();
 
-    ASSERT_EQ(epoll.mErrc, ErrorCode::None);
+    ASSERT_EQ(createEpoll.getError(), ErrorCode::None);
+    ASSERT_TRUE(createEpoll);
+
+    auto &epoll = createEpoll.getEpoll();
 
     auto std_in = Fd{0};
-    auto res = epoll->add(std_in, EventCode::EpollIn);
+    auto res = epoll.add(std_in, EventCode::EpollIn);
 
     std::cout << ErrorCode::None << std::endl;
 
-    ASSERT_EQ(res.mErrc, ErrorCode::None);
+    ASSERT_EQ(res.getError(), ErrorCode::None);
 
-    auto res2 = epoll->erase(std_in);
+    auto res2 = epoll.erase(std_in);
 
-    ASSERT_EQ(res2.mErrc, ErrorCode::None);
+    ASSERT_EQ(res2.getError(), ErrorCode::None);
 
     auto fd = Fd{1};
-    auto res3 = epoll->erase(fd);
+    auto res3 = epoll.erase(fd);
 
-    ASSERT_EQ(res3.mErrc, ErrorCode::Einval);
+    ASSERT_EQ(res3.getError(), ErrorCode::Einval);
 
-    EXPECT_NO_THROW((void)epoll->close());
+    EXPECT_NO_THROW((void)epoll.close());
 }
 
 TEST(EPOLL, wait)
 {
-    auto epoll = EpollImpl<Light, Fd>::epollCreate();
+    auto createEpoll = EpollImpl<Light, Fd>::epollCreate();
 
-    ASSERT_EQ(epoll.mErrc, ErrorCode::None);
+    ASSERT_EQ(createEpoll.getError(), ErrorCode::None);
+    ASSERT_TRUE(createEpoll);
+
+    auto &epoll = createEpoll.getEpoll();
 
     int mypipe[2];
     int pipeRes = pipe(mypipe);
@@ -97,21 +107,22 @@ TEST(EPOLL, wait)
     ASSERT_EQ(pipeRes, 0);
 
     auto readFd = Fd{mypipe[0]};
-    auto res = epoll->add(readFd, EventCode::EpollIn);
+    auto res = epoll.add(readFd, EventCode::EpollIn);
 
-    ASSERT_EQ(res.mErrc, ErrorCode::None);
+    ASSERT_EQ(res.getError(), ErrorCode::None);
     
     std::string input("test");
     write_to_pipe(mypipe[1], input);
 
-    auto waitResult = epoll->wait();
+    auto waitResult = epoll.wait();
+    const auto events = waitResult.getEvents();
 
-    ASSERT_EQ(waitResult.mErrc, ErrorCode::None);
-    ASSERT_EQ(waitResult->size(), 1);
-    ASSERT_EQ(waitResult->front().second.mData.fd, readFd.getFileDescriptor());
+    ASSERT_EQ(waitResult.getError(), ErrorCode::None);
+    ASSERT_EQ(events.size(), 1);
+    ASSERT_EQ(events.front().second.mData.fd, readFd.getFileDescriptor());
     
     char read_buf[READSIZE];
-    int bytes_read = read(waitResult->front().second.mData.fd, read_buf, READSIZE);
+    int bytes_read = read(events.front().second.mData.fd, read_buf, READSIZE);
 
     ASSERT_EQ(bytes_read, input.size());
 
@@ -122,9 +133,12 @@ TEST(EPOLL, wait)
 
 TEST(EPOLL, wait_empty_input)
 {
-    auto epoll = EpollImpl<Light, Fd>::epollCreate();
+    auto createEpoll = EpollImpl<Light, Fd>::epollCreate();
 
-    ASSERT_EQ(epoll.mErrc, ErrorCode::None);
+    ASSERT_EQ(createEpoll.getError(), ErrorCode::None);
+    ASSERT_TRUE(createEpoll);
+
+    auto &epoll = createEpoll.getEpoll();
 
     int mypipe[2];
     int pipeRes = pipe(mypipe);
@@ -132,94 +146,111 @@ TEST(EPOLL, wait_empty_input)
     ASSERT_EQ(pipeRes, 0);
 
     auto readFd = Fd{mypipe[0]};
-    auto res = epoll->add(readFd, EventCode::EpollIn);
+    auto res = epoll.add(readFd, EventCode::EpollIn);
 
-    ASSERT_EQ(res.mErrc, ErrorCode::None);
+    ASSERT_EQ(res.getError(), ErrorCode::None);
 
-    auto waitResult = epoll->wait(0);
+    auto waitResult = epoll.wait(0);
+    const auto events = waitResult.getEvents();
 
-    ASSERT_EQ(waitResult.mErrc, ErrorCode::None);
-    ASSERT_EQ(waitResult->size(), 0);    
+    ASSERT_EQ(waitResult.getError(), ErrorCode::None);
+    ASSERT_EQ(events.size(), 0);    
 }
 
 TEST(EPOLL, mod_fd_does_not_exist)
 {
-    auto epoll = EpollImpl<MockEpoll, Fd>::epollCreate();
+    auto createEpoll = EpollImpl<Light, Fd>::epollCreate();
+
+    ASSERT_EQ(createEpoll.getError(), ErrorCode::None);
+    ASSERT_TRUE(createEpoll);
+
+    auto &epoll = createEpoll.getEpoll();
 
     auto readFd = Fd{0};
 
-    auto ctl_res = epoll->mod(readFd, EventCode::EpollOut);
+    auto ctl_res = epoll.mod(readFd, EventCode::EpollOut);
 
-    ASSERT_EQ(ctl_res.mErrc, ErrorCode::EnoEnt);
+    ASSERT_EQ(ctl_res.getError(), ErrorCode::EnoEnt);
 }
 
 TEST(EPOLL, consistent_state)
 {
-    auto epoll = EpollImpl<MockEpoll, Fd>::epollCreate();
+    auto createEpoll = EpollImpl<Light, Fd>::epollCreate();
+
+    ASSERT_EQ(createEpoll.getError(), ErrorCode::None);
+    ASSERT_TRUE(createEpoll);
+
+    auto &epoll = createEpoll.getEpoll();
 
     auto fd1 = Fd{0};
     auto fd2 = Fd{1};
 
-    ASSERT_FALSE(epoll->hasFd(fd1.getFileDescriptor()));
-    ASSERT_FALSE(epoll->hasFd(fd2.getFileDescriptor()));
-    ASSERT_TRUE(epoll->getEvents(fd1).mCodes.empty());
-    ASSERT_TRUE(epoll->getEvents(fd2).mCodes.empty());
+    ASSERT_FALSE(epoll.hasFd(fd1.getFileDescriptor()));
+    ASSERT_FALSE(epoll.hasFd(fd2.getFileDescriptor()));
+    ASSERT_TRUE(epoll.getEvents(fd1).mCodes.empty());
+    ASSERT_TRUE(epoll.getEvents(fd2).mCodes.empty());
 
-    epoll->add(fd1, EventCode::EpollErr);
-    ASSERT_TRUE(epoll->hasFd(fd1.getFileDescriptor()));
-    ASSERT_FALSE(epoll->hasFd(fd2.getFileDescriptor()));
-    ASSERT_FALSE(epoll->getEvents(fd1).mCodes.empty());
-    ASSERT_TRUE(epoll->getEvents(fd2).mCodes.empty());
+    epoll.add(fd1, EventCode::EpollErr);
+    ASSERT_TRUE(epoll.hasFd(fd1.getFileDescriptor()));
+    ASSERT_FALSE(epoll.hasFd(fd2.getFileDescriptor()));
+    ASSERT_FALSE(epoll.getEvents(fd1).mCodes.empty());
+    ASSERT_TRUE(epoll.getEvents(fd2).mCodes.empty());
 
-    epoll->add(fd2, EventCode::EpollErr);
-    ASSERT_TRUE(epoll->hasFd(fd1.getFileDescriptor()));
-    ASSERT_TRUE(epoll->hasFd(fd2.getFileDescriptor()));
-    ASSERT_FALSE(epoll->getEvents(fd1).mCodes.empty());
-    ASSERT_FALSE(epoll->getEvents(fd2).mCodes.empty());
+    epoll.add(fd2, EventCode::EpollErr);
+    ASSERT_TRUE(epoll.hasFd(fd1.getFileDescriptor()));
+    ASSERT_TRUE(epoll.hasFd(fd2.getFileDescriptor()));
+    ASSERT_FALSE(epoll.getEvents(fd1).mCodes.empty());
+    ASSERT_FALSE(epoll.getEvents(fd2).mCodes.empty());
 
-    epoll->erase(fd1);
-    ASSERT_FALSE(epoll->hasFd(fd1.getFileDescriptor()));
-    ASSERT_TRUE(epoll->hasFd(fd2.getFileDescriptor()));
-    ASSERT_TRUE(epoll->getEvents(fd1).mCodes.empty());
-    ASSERT_FALSE(epoll->getEvents(fd2).mCodes.empty());
+    epoll.erase(fd1);
+    ASSERT_FALSE(epoll.hasFd(fd1.getFileDescriptor()));
+    ASSERT_TRUE(epoll.hasFd(fd2.getFileDescriptor()));
+    ASSERT_TRUE(epoll.getEvents(fd1).mCodes.empty());
+    ASSERT_FALSE(epoll.getEvents(fd2).mCodes.empty());
 
-    epoll->erase(fd2);
-    ASSERT_FALSE(epoll->hasFd(fd1.getFileDescriptor()));
-    ASSERT_FALSE(epoll->hasFd(fd2.getFileDescriptor()));
-    ASSERT_TRUE(epoll->getEvents(fd1).mCodes.empty());
-    ASSERT_TRUE(epoll->getEvents(fd2).mCodes.empty());
+    epoll.erase(fd2);
+    ASSERT_FALSE(epoll.hasFd(fd1.getFileDescriptor()));
+    ASSERT_FALSE(epoll.hasFd(fd2.getFileDescriptor()));
+    ASSERT_TRUE(epoll.getEvents(fd1).mCodes.empty());
+    ASSERT_TRUE(epoll.getEvents(fd2).mCodes.empty());
 
 }
 
 TEST(EPOLL, mod_update_events)
 {
-    auto epoll = EpollImpl<MockEpoll, Fd>::epollCreate();
+    auto createEpoll = EpollImpl<MockEpoll, Fd>::epollCreate();
+
+    ASSERT_EQ(createEpoll.getError(), ErrorCode::None);
+    ASSERT_TRUE(createEpoll);
+
+    auto &epoll = createEpoll.getEpoll();
 
     auto readFd = Fd{0};
 
-    EXPECT_CALL(*epoll->getUnderlying(),epoll_ctl).Times(4);
+    const auto &underling = epoll.getUnderlying();
+    EXPECT_CALL(underling,epoll_ctl).Times(4);
 
-    ASSERT_EQ(epoll->getEvents(readFd), EventCodes({}));
+    ASSERT_EQ(epoll.getEvents(readFd), EventCodes({}));
 
-    auto res1 = epoll->add(readFd, EventCode::EpollIn);
-    ASSERT_EQ(res1.mErrc, ErrorCode::None);
+    auto res1 = epoll.add(readFd, EventCode::EpollIn);
+    ASSERT_EQ(res1.getError(), ErrorCode::None);
 
-    ASSERT_EQ(epoll->getEvents(readFd), EventCode::EpollIn);
+    ASSERT_EQ(epoll.getEvents(readFd), EventCode::EpollIn);
 
-    auto res2 = epoll->mod(readFd, EventCode::EpollErr);
-    ASSERT_EQ(res2.mErrc, ErrorCode::None);
+    auto res2 = epoll.mod(readFd, EventCode::EpollErr);
+    ASSERT_EQ(res2.getError(), ErrorCode::None);
 
-    ASSERT_EQ(epoll->getEvents(readFd), EventCode::EpollErr);
+    ASSERT_EQ(epoll.getEvents(readFd), EventCode::EpollErr);
 
-    auto res3 = epoll->mod(readFd, EventCode::EpollErr | EventCode::EpollIn);
-    ASSERT_EQ(res3.mErrc, ErrorCode::None);
+    auto res3 = epoll.mod(readFd, EventCode::EpollErr | EventCode::EpollIn);
+    ASSERT_EQ(res3.getError(), ErrorCode::None);
 
-    ASSERT_EQ(epoll->getEvents(readFd), EventCode::EpollErr | EventCode::EpollIn);
+    ASSERT_EQ(epoll.getEvents(readFd), EventCode::EpollErr | EventCode::EpollIn);
 
-    auto res4 = epoll->erase(readFd);
-    ASSERT_EQ(res4.mErrc, ErrorCode::None);
+    auto res4 = epoll.erase(readFd);
+    ASSERT_EQ(res4.getError(), ErrorCode::None);
 
-    ASSERT_EQ(epoll->getEvents(readFd), EventCodes({}));
+    ASSERT_EQ(epoll.getEvents(readFd), EventCodes({}));
 
 }
 

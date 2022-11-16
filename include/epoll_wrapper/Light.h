@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <sys/epoll.h>
 
 namespace epoll_wrapper
