@@ -34,8 +34,8 @@ namespace epoll_wrapper
 
     struct Event
     {
-        EventCodeMask mCodes;
-        ErrorCodeMask mError;
+        EventCodeMask mEvents;
+        ErrorCodeMask mErrors;
         epoll_data_t mData;
         uint32_t mFd;
     };
