@@ -1,8 +1,9 @@
 #include "epoll_wrapper/Event.h"
+#include <sys/epoll.h>
 
 namespace epoll_wrapper
 {
-     std::ostream& operator<<(std::ostream& os, const EventCode& ec)
+    std::ostream& operator<<(std::ostream& os, const EventCode& ec)
     {
         switch(ec)
         {
@@ -44,18 +45,6 @@ namespace epoll_wrapper
         return os;
     }
 
-    int fromEvent(const EventCodes& events)
-    {
-        int ec = 0;
-
-        for(auto event : events.mCodes)
-        {
-            ec |= fromEvent(event);
-        }
-
-        return ec;
-    }
-
     constexpr int fromEvent(EventCode event)
     {
         switch (event)
@@ -87,99 +76,59 @@ namespace epoll_wrapper
         return 0;
     }
 
-    EventCodes::EventCodes(EventCode ec) : mCodes({ec}) {}
-    EventCodes::EventCodes(std::unordered_set<EventCode> ec) : mCodes(ec) {}
-
-    EventCodes& EventCodes::operator=(const EventCodes& ec)
+    int toEpollEvent(EventCodeMask ec)
     {
-        this->mCodes = ec.mCodes;
+        int eventc = 0;
 
-        return *this;
-    }
-    EventCodes& EventCodes::operator=(EventCodes&& ec)
-    {
-        this->mCodes = std::move(ec.mCodes);
+        if (ec & EventCode::EpollIn)        { ec = ec | EPOLLIN;        }
+        if (ec & EventCode::EpollOut)       { ec = ec | EPOLLOUT;       }
+        if (ec & EventCode::EpollRdHUp)     { ec = ec | EPOLLRDHUP;     }
+        if (ec & EventCode::EpollPri)       { ec = ec | EPOLLPRI;       }
+        if (ec & EventCode::EpollErr)       { ec = ec | EPOLLERR;       }
+        if (ec & EventCode::EpollHUp)       { ec = ec | EPOLLHUP;       }
+        if (ec & EventCode::EpollEt)        { ec = ec | EPOLLET;        }
+        if (ec & EventCode::EpollOneShot)   { ec = ec | EPOLLONESHOT;   }
+        if (ec & EventCode::EpollWakeUp)    { ec = ec | EPOLLWAKEUP;    }
+        if (ec & EventCode::EpollExclusive) { ec = ec | EPOLLEXCLUSIVE; }
 
-        return *this;
-    }
-
-    bool EventCodes::has(EventCode ec)
-    {
-        return mCodes.find(ec) != mCodes.end();
+        return eventc;
     }
 
-    bool EventCodes::operator==(const EventCodes &ecs) const
+    EventCodeMask fromEpollEvent(int eventc)
     {
-        std::unordered_set<EventCode> codes;
-        for (auto ec : mCodes)
-        {
-            if (ecs.mCodes.count(ec))
-            {
-                codes.insert(ec);
-            }
-        }
+        EventCodeMask ec;
 
-        return codes.size() == mCodes.size();
+        if (eventc & EPOLLIN)        { ec = ec | EventCode::EpollIn;        }
+        if (eventc & EPOLLOUT)       { ec = ec | EventCode::EpollOut;       }
+        if (eventc & EPOLLRDHUP)     { ec = ec | EventCode::EpollRdHUp;     }
+        if (eventc & EPOLLPRI)       { ec = ec | EventCode::EpollPri;       }
+        if (eventc & EPOLLERR)       { ec = ec | EventCode::EpollErr;       }
+        if (eventc & EPOLLHUP)       { ec = ec | EventCode::EpollHUp;       }
+        if (eventc & EPOLLET)        { ec = ec | EventCode::EpollEt;        }
+        if (eventc & EPOLLONESHOT)   { ec = ec | EventCode::EpollOneShot;   }
+        if (eventc & EPOLLWAKEUP)    { ec = ec | EventCode::EpollWakeUp;    }
+        if (eventc & EPOLLEXCLUSIVE) { ec = ec | EventCode::EpollExclusive; }
+
+        return ec;
     }
 
-    EventCodes operator| (EventCode ec1, EventCode ec2)
+    EventCodeMask operator|(EventCodeMask ec1, EventCode ec2)
     {
-        std::unordered_set<EventCode> codes;
-        codes.insert(ec1);
-        codes.insert(ec2);
-        return EventCodes{codes};
+        return ec1 | static_cast<EventCodeMask>(ec2);
     }
 
-    EventCodes operator| (EventCodes ec1, EventCode ec2)
+    EventCodeMask operator|(EventCode ec1, EventCode ec2)
     {
-        ec1.mCodes.insert(ec2);
-        return ec1;
+        return static_cast<EventCodeMask>(ec1) | ec2;
     }
 
-    EventCodes operator| (EventCodes ec1, EventCodes ec2)
+    EventCodeMask operator&(EventCodeMask ec1, EventCode ec2)
     {
-        ec1.mCodes.insert(ec2.mCodes.begin(), ec2.mCodes.end());
-        return ec1;
+        return ec1 & static_cast<EventCodeMask>(ec2);
     }
 
-    std::ostream& operator<<(std::ostream& os, const EventCodes& ecs)
+    EventCodeMask operator&(EventCode ec1, EventCode ec2)
     {
-        bool first = true;
-        os << "{";
-        for (auto ec : ecs.mCodes)
-        {
-            if (!first)
-            {
-                os << ",";
-            }
-            else
-            {
-                first = false;
-            }
-
-            os << ec;
-        }
-
-        os << "}";
-
-        return os;
-    }
-
-    EventCodes fromEpollEvent(int eventc)
-    {
-        std::unordered_set<EventCode> codes;
-
-        if (eventc & EPOLLIN)        { codes.emplace(EventCode::EpollIn);        }
-        if (eventc & EPOLLOUT)       { codes.emplace(EventCode::EpollOut);       }
-        if (eventc & EPOLLRDHUP)     { codes.emplace(EventCode::EpollRdHUp);     }
-        if (eventc & EPOLLPRI)       { codes.emplace(EventCode::EpollPri);       }
-        if (eventc & EPOLLERR)       { codes.emplace(EventCode::EpollErr);       }
-        if (eventc & EPOLLHUP)       { codes.emplace(EventCode::EpollHUp);       }
-        if (eventc & EPOLLET)        { codes.emplace(EventCode::EpollEt);        }
-        if (eventc & EPOLLONESHOT)   { codes.emplace(EventCode::EpollOneShot);   }
-        if (eventc & EPOLLWAKEUP)    { codes.emplace(EventCode::EpollWakeUp);    }
-        if (eventc & EPOLLEXCLUSIVE) { codes.emplace(EventCode::EpollExclusive); }
-
-        return EventCodes{codes};
+        return static_cast<EventCodeMask>(ec1) & ec2;
     }
 }

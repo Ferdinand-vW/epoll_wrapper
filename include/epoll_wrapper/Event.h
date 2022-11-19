@@ -3,60 +3,44 @@
 #include "Error.h"
 
 #include <ostream>
+#include <sys/types.h>
 #include <vector>
 #include <sys/epoll.h>
 #include <unordered_set>
 
 namespace epoll_wrapper
 {
-    enum class EventCode 
-        { None
-        , EpollIn , EpollOut    , EpollRdHUp
-        , EpollPri, EpollErr    , EpollHUp
-        , EpollEt , EpollOneShot, EpollWakeUp
-        , EpollExclusive
+    using EventCodeMask = u_int16_t;
+    enum class EventCode : EventCodeMask
+        { None           = 0u
+        , EpollIn        = 1u << 0
+        , EpollOut       = 1u << 1
+        , EpollRdHUp     = 1u << 2
+        , EpollPri       = 1u << 3
+        , EpollErr       = 1u << 4
+        , EpollHUp       = 1u << 5
+        , EpollEt        = 1u << 6
+        , EpollOneShot   = 1u << 7
+        , EpollWakeUp    = 1u << 8
+        , EpollExclusive = 1u << 9
         };
 
     std::ostream& operator<<(std::ostream&, const EventCode&);
-
-    struct EventCodes
-    {
-        EventCodes() = default;
-        EventCodes(EventCode ec);
-        EventCodes(std::unordered_set<EventCode> ec);
-        EventCodes(const EventCodes &) = default;
-        EventCodes(EventCodes &&) = default;
-
-        EventCodes& operator=(const EventCodes&);
-        EventCodes& operator=(EventCodes&&);
-
-        std::unordered_set<EventCode> mCodes;
-
-        bool has(EventCode ec);
-
-        std::unordered_set<EventCode>* operator->()
-        {
-            return &mCodes;
-        }
-
-        bool operator==(const EventCodes &ec) const;
-    };
-
-    
-    EventCodes operator| (EventCode ec1, EventCode ec2);
-    EventCodes operator| (const EventCodes& ec1, EventCode ec2);
-    EventCodes operator| (const EventCodes& ec1, const EventCodes& ec2);
-    std::ostream& operator<<(std::ostream&, const EventCodes&);
+ 
+    EventCodeMask operator|(EventCodeMask ec1, EventCode ec2);
+    EventCodeMask operator|(EventCode ec1, EventCode ec2);
+    EventCodeMask operator&(EventCodeMask ec1, EventCode ec2);
+    EventCodeMask operator&(EventCode ec1, EventCode ec2);
 
     struct Event
     {
-        EventCodes mCodes;
-        ErrorCode mError{ErrorCode::None};
+        EventCodeMask mCodes;
+        ErrorCodeMask mError;
         epoll_data_t mData;
         uint32_t mFd;
     };
 
-    int fromEvent(const EventCodes& events);
-    constexpr int fromEvent(EventCode event);
-    EventCodes fromEpollEvent(int eventc);
+    // int fromEvent(const EventCode& events);
+    int toEpollEvent(EventCodeMask event);
+    EventCodeMask fromEpollEvent(int eventc);
 }

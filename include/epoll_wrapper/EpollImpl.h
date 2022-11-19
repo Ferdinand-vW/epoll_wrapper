@@ -18,11 +18,11 @@ namespace epoll_wrapper
     class CreateAction
     {
         public:
-            CreateAction(std::unique_ptr<Epoll> epoll, ErrorCode errc);
+            CreateAction(std::unique_ptr<Epoll> epoll, ErrorCodeMask errc);
 
             operator bool() const;
 
-            ErrorCode getError() const;
+            ErrorCodeMask getError() const;
 
             bool hasError() const;
 
@@ -32,37 +32,37 @@ namespace epoll_wrapper
         private:
 
         std::unique_ptr<Epoll> mEpoll; 
-        ErrorCode mErrc;
+        ErrorCodeMask mErrc;
     };
 
     class CtlAction
     {
         public:
-            CtlAction(ErrorCode errc);
+            CtlAction(ErrorCodeMask errc);
 
             bool hasError() const;
 
-            ErrorCode getError() const;
+            ErrorCodeMask getError() const;
 
         private:
-            ErrorCode mErrc;
+            ErrorCodeMask mErrc;
     };
 
     template <typename FdType>
     class WaitAction
     {
         public:
-            WaitAction(std::vector<std::pair<const FdType&, Event>>&&, ErrorCode);
+            WaitAction(std::vector<std::pair<const FdType&, Event>>&&, ErrorCodeMask);
 
             const std::vector<std::pair<const FdType&, Event>>& getEvents() const;
 
             bool hasError() const;
 
-            ErrorCode getError() const;
+            ErrorCodeMask getError() const;
 
         private:
             std::vector<std::pair<const FdType&, Event>> mEvents;
-            ErrorCode mErrc;
+            ErrorCodeMask mErrc;
     };
 
     template <typename EpollType, typename FdType>
@@ -78,22 +78,24 @@ namespace epoll_wrapper
 
         WaitAction<FdType> wait(uint32_t timeout = -1);
 
-        CtlAction add(const FdType& fd, EventCodes event);
-        CtlAction mod(const FdType& fd, EventCodes event);
+        CtlAction add(const FdType& fd, EventCode event);
+        CtlAction add(const FdType& fd, EventCodeMask event);
+        CtlAction mod(const FdType& fd, EventCode event);
+        CtlAction mod(const FdType& fd, EventCodeMask event);
         CtlAction erase(const FdType& fd);
         void close();
 
         const EpollType& getUnderlying() const;
         bool hasFd(uint32_t fd) const;
         const FdType& getFd(uint32_t fd) const;
-        const EventCodes getEvents(const FdType &fd) const;
+        const EventCodeMask getEvents(const FdType &fd) const;
         
     private:
         static constexpr uint32_t MAXEVENTS = 32;
 
         int32_t mTimeout{-1};
         // uint32_t is the underlying file descriptor
-        std::unordered_map<uint32_t, EventCodes> mRegisteredEvents;
+        std::unordered_map<uint32_t, EventCodeMask> mRegisteredEvents;
         std::unordered_map<uint32_t, const FdType&> mRegisteredFds;
         struct epoll_event mEvents[MAXEVENTS];
 

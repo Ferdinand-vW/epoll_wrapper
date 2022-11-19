@@ -53,37 +53,46 @@ namespace epoll_wrapper
         return os;
     }
 
-    bool Error::isSuccess()
-    { 
-        return mCode == ErrorCode::None;
-    }
-
-    ErrorCode fromEpollError(int errc)
+    ErrorCodeMask fromEpollError(int errc)
     {
+        ErrorCodeMask ec;
+
         if (errc >= 0)
         {
-            return ErrorCode::None;
+            return ErrorCodeMask{};
         }
 
         int err = errno;
 
-        if      (err & EBADF)  { return ErrorCode::EbadF;  }
-        else if (err & EEXIST) { return ErrorCode::Eexist; }
-        else if (err & EINVAL) { return ErrorCode::Einval; }
-        else if (err & ELOOP)  { return ErrorCode::Eloop;  }
-        else if (err & ENOENT) { return ErrorCode::EnoEnt; }
-        else if (err & ENOMEM) { return ErrorCode::EnoMem; }
-        else if (err & ENOSPC) { return ErrorCode::EnoSpc; }
-        else if (err & EPERM)  { return ErrorCode::Eperm;  }
-        else if (err & EFAULT) { return ErrorCode::Efault; }
-        else if (err & EINTR)  { return ErrorCode::Eintr;  }
-        else if (err & EMFILE) { return ErrorCode::EmFile; }
-        else if (err & ENFILE) { return ErrorCode::EnFile; }
-        else { return ErrorCode::Unknown; }
+        if (err & EBADF)  { ec = ec | ErrorCode::EbadF;  }
+        if (err & EEXIST) { ec = ec | ErrorCode::Eexist; }
+        if (err & EINVAL) { ec = ec | ErrorCode::Einval; }
+        if (err & ELOOP)  { ec = ec | ErrorCode::Eloop;  }
+        if (err & ENOENT) { ec = ec | ErrorCode::EnoEnt; }
+        if (err & ENOMEM) { ec = ec | ErrorCode::EnoMem; }
+        if (err & ENOSPC) { ec = ec | ErrorCode::EnoSpc; }
+        if (err & EPERM)  { ec = ec | ErrorCode::Eperm;  }
+        if (err & EFAULT) { ec = ec | ErrorCode::Efault; }
+        if (err & EINTR)  { ec = ec | ErrorCode::Eintr;  }
+        if (err & EMFILE) { ec = ec | ErrorCode::EmFile; }
+        if (err & ENFILE) { ec = ec | ErrorCode::EnFile; }
+        if (err && ec == 0) { ec = ec | ErrorCode::Unknown; }
+
+        return ec;
     }
 
-    Error toError(int errc)
+    ErrorCodeMask operator|(ErrorCodeMask mask, ErrorCode err)
     {
-        return Error{fromEpollError(errc)};
+        return mask | static_cast<ErrorCodeMask>(err);
+    }
+
+    ErrorCodeMask operator|(ErrorCode err1, ErrorCode err2)
+    {
+        return static_cast<ErrorCodeMask>(err1) | err2;
+    }
+
+    ErrorCodeMask operator&(ErrorCodeMask mask, ErrorCode err)
+    {
+        return mask & static_cast<ErrorCodeMask>(err);
     }
 }
