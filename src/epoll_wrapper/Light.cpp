@@ -4,6 +4,7 @@
 #include <optional>
 #include <sys/epoll.h>
 #include <unistd.h>
+#include <iostream>
 
 namespace epoll_wrapper
 {
@@ -12,6 +13,7 @@ namespace epoll_wrapper
     std::unique_ptr<Light> Light::epoll_create(int size)
     {
         int epollFd = ::epoll_create(size);
+
         return std::unique_ptr<Light>(new Light(epollFd));
     }
 
@@ -28,5 +30,10 @@ namespace epoll_wrapper
     void Light::close()
     {
         ::close(mEpollFd);
+    }
+
+    int Light::getUnderlying() const
+    {
+        return mEpollFd;
     }
 }

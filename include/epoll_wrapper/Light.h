@@ -18,5 +18,6 @@ namespace epoll_wrapper
             int epoll_ctl(int op, int fd, struct epoll_event *event);
             int epoll_wait(struct epoll_event *events, int maxevents, int timeout);
             void close();
+            int getUnderlying() const;
     };
 }

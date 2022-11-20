@@ -1,4 +1,5 @@
 #include "epoll_wrapper/Event.h"
+#include <iostream>
 #include <sys/epoll.h>
 
 namespace epoll_wrapper
@@ -80,16 +81,16 @@ namespace epoll_wrapper
     {
         int eventc = 0;
 
-        if (ec & EventCode::EpollIn)        { ec = ec | EPOLLIN;        }
-        if (ec & EventCode::EpollOut)       { ec = ec | EPOLLOUT;       }
-        if (ec & EventCode::EpollRdHUp)     { ec = ec | EPOLLRDHUP;     }
-        if (ec & EventCode::EpollPri)       { ec = ec | EPOLLPRI;       }
-        if (ec & EventCode::EpollErr)       { ec = ec | EPOLLERR;       }
-        if (ec & EventCode::EpollHUp)       { ec = ec | EPOLLHUP;       }
-        if (ec & EventCode::EpollEt)        { ec = ec | EPOLLET;        }
-        if (ec & EventCode::EpollOneShot)   { ec = ec | EPOLLONESHOT;   }
-        if (ec & EventCode::EpollWakeUp)    { ec = ec | EPOLLWAKEUP;    }
-        if (ec & EventCode::EpollExclusive) { ec = ec | EPOLLEXCLUSIVE; }
+        if (ec & EventCode::EpollIn)        { eventc = eventc | EPOLLIN;        }
+        if (ec & EventCode::EpollOut)       { eventc = eventc | EPOLLOUT;       }
+        if (ec & EventCode::EpollRdHUp)     { eventc = eventc | EPOLLRDHUP;     }
+        if (ec & EventCode::EpollPri)       { eventc = eventc | EPOLLPRI;       }
+        if (ec & EventCode::EpollErr)       { eventc = eventc | EPOLLERR;       }
+        if (ec & EventCode::EpollHUp)       { eventc = eventc | EPOLLHUP;       }
+        if (ec & EventCode::EpollEt)        { eventc = eventc | EPOLLET;        }
+        if (ec & EventCode::EpollOneShot)   { eventc = eventc | EPOLLONESHOT;   }
+        if (ec & EventCode::EpollWakeUp)    { eventc = eventc | EPOLLWAKEUP;    }
+        if (ec & EventCode::EpollExclusive) { eventc = eventc | EPOLLEXCLUSIVE; }
 
         return eventc;
     }

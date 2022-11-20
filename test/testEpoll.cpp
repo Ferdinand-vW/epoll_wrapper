@@ -46,10 +46,7 @@ int READSIZE=64*1024;
 
 void write_to_pipe (int fd, std::string text)
 {
-  FILE *stream;
-  stream = fdopen (fd, "w");
-  fprintf (stream, "%s", text.c_str());
-  fclose (stream);
+    write(fd, text.c_str(), text.size());
 }
 
 TEST(EPOLL, create_delete)
@@ -75,8 +72,6 @@ TEST(EPOLL, add_and_remove_listener)
 
     auto std_in = Fd{0};
     auto res = epoll.add(std_in, EventCode::EpollIn);
-
-    std::cout << ErrorCode::None << std::endl;
 
     ASSERT_FALSE(res.getError());
 
@@ -108,7 +103,7 @@ TEST(EPOLL, wait)
 
     auto readFd = Fd{mypipe[0]};
     auto res = epoll.add(readFd, EventCode::EpollIn);
-
+   
     ASSERT_FALSE(res.getError());
     
     std::string input("test");
@@ -120,7 +115,7 @@ TEST(EPOLL, wait)
     ASSERT_FALSE(waitResult.getError());
     ASSERT_EQ(events.size(), 1);
     ASSERT_EQ(events.front().second.mData.fd, readFd.getFileDescriptor());
-    
+
     char read_buf[READSIZE];
     int bytes_read = read(events.front().second.mData.fd, read_buf, READSIZE);
 
