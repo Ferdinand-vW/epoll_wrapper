@@ -1,5 +1,4 @@
 #include "epoll_wrapper/Event.h"
-#include <iostream>
 #include <sys/epoll.h>
 
 namespace epoll_wrapper
@@ -97,7 +96,7 @@ namespace epoll_wrapper
 
     EventCodeMask fromEpollEvent(int eventc)
     {
-        EventCodeMask ec;
+        EventCodeMask ec = 0;
 
         if (eventc & EPOLLIN)        { ec = ec | EventCode::EpollIn;        }
         if (eventc & EPOLLOUT)       { ec = ec | EventCode::EpollOut;       }

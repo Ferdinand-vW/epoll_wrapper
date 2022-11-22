@@ -11,7 +11,6 @@
 #include <epoll_wrapper/EpollImpl.h>
 #include <epoll_wrapper/Error.h>
 #include <exception>
-#include <iostream>
 #include <optional>
 #include <ostream>
 #include <stdexcept>
@@ -125,9 +124,16 @@ namespace epoll_wrapper
         std::vector<std::pair<const FdType&, Event>> eventVector;
         int i = 0;
 
+        ErrorCodeMask waErr = 0;
+
+        if (resultCode < 0)
+        {
+            waErr = waErr | fromEpollError(errno);
+        }
+
         while (i < resultCode)
         {
-            Event ev{fromEpollEvent(events[i].events), fromEpollError(resultCode), std::move(events[i].data)};
+            Event ev{fromEpollEvent(events[i].events), fromEpollError(errno), std::move(events[i].data)};
 
             // Reserve event vector
             if (auto it = mRegisteredFds.find(events[i].data.fd); it != mRegisteredFds.end())

@@ -14,6 +14,8 @@ namespace epoll_wrapper
             Light(int epollfd);
 
         public:
+            ~Light();
+
             static std::unique_ptr<Light> epoll_create(int size);
             int epoll_ctl(int op, int fd, struct epoll_event *event);
             int epoll_wait(struct epoll_event *events, int maxevents, int timeout);

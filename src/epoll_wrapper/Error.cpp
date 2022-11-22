@@ -1,4 +1,5 @@
 #include "epoll_wrapper/Error.h"
+#include <iostream>
 
 namespace epoll_wrapper
 {
@@ -53,16 +54,9 @@ namespace epoll_wrapper
         return os;
     }
 
-    ErrorCodeMask fromEpollError(int errc)
+    ErrorCodeMask fromEpollError(int err)
     {
-        ErrorCodeMask ec;
-
-        if (errc >= 0)
-        {
-            return ErrorCodeMask{};
-        }
-
-        int err = errno;
+        ErrorCodeMask ec = 0;
 
         if (err & EBADF)  { ec = ec | ErrorCode::EbadF;  }
         if (err & EEXIST) { ec = ec | ErrorCode::Eexist; }

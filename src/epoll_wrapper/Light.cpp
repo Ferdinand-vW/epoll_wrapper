@@ -4,11 +4,15 @@
 #include <optional>
 #include <sys/epoll.h>
 #include <unistd.h>
-#include <iostream>
 
 namespace epoll_wrapper
 {
     Light::Light(int epollFd) : mEpollFd(epollFd) {}
+
+    Light::~Light()
+    {
+        close();
+    }
 
     std::unique_ptr<Light> Light::epoll_create(int size)
     {
