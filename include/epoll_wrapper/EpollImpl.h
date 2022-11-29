@@ -18,11 +18,11 @@ namespace epoll_wrapper
     class CreateAction
     {
         public:
-            CreateAction(std::unique_ptr<Epoll> epoll, ErrorCodeMask errc);
+            CreateAction(std::unique_ptr<Epoll> epoll, ErrorCode errc);
 
             operator bool() const;
 
-            ErrorCodeMask getError() const;
+            ErrorCode getError() const;
 
             bool hasError() const;
 
@@ -32,37 +32,37 @@ namespace epoll_wrapper
         private:
 
         std::unique_ptr<Epoll> mEpoll; 
-        ErrorCodeMask mErrc;
+        ErrorCode mErrc;
     };
 
     class CtlAction
     {
         public:
-            CtlAction(ErrorCodeMask errc);
+            CtlAction(ErrorCode errc);
 
             bool hasError() const;
 
-            ErrorCodeMask getError() const;
+            ErrorCode getError() const;
 
         private:
-            ErrorCodeMask mErrc;
+            ErrorCode mErrc;
     };
 
     template <typename FdType>
     class WaitAction
     {
         public:
-            WaitAction(std::vector<std::pair<const FdType&, Event>>&&, ErrorCodeMask);
+            WaitAction(std::vector<std::pair<const FdType&, Event>>&&, ErrorCode);
 
             const std::vector<std::pair<const FdType&, Event>>& getEvents() const;
 
             bool hasError() const;
 
-            ErrorCodeMask getError() const;
+            ErrorCode getError() const;
 
         private:
             std::vector<std::pair<const FdType&, Event>> mEvents;
-            ErrorCodeMask mErrc;
+            ErrorCode mErrc;
     };
 
     template <typename EpollType, typename FdType>

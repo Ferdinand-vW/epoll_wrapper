@@ -1,5 +1,8 @@
 #include "epoll_wrapper/Error.h"
 #include <iostream>
+#include <sstream>
+#include <bitset>
+#include <sys/types.h>
 
 namespace epoll_wrapper
 {
@@ -54,25 +57,61 @@ namespace epoll_wrapper
         return os;
     }
 
-    ErrorCodeMask fromEpollError(int err)
+    std::string errorMaskToString(const ErrorCodeMask& ecm)
     {
-        ErrorCodeMask ec = 0;
+        std::stringstream ss;
 
-        if (err & EBADF)  { ec = ec | ErrorCode::EbadF;  }
-        if (err & EEXIST) { ec = ec | ErrorCode::Eexist; }
-        if (err & EINVAL) { ec = ec | ErrorCode::Einval; }
-        if (err & ELOOP)  { ec = ec | ErrorCode::Eloop;  }
-        if (err & ENOENT) { ec = ec | ErrorCode::EnoEnt; }
-        if (err & ENOMEM) { ec = ec | ErrorCode::EnoMem; }
-        if (err & ENOSPC) { ec = ec | ErrorCode::EnoSpc; }
-        if (err & EPERM)  { ec = ec | ErrorCode::Eperm;  }
-        if (err & EFAULT) { ec = ec | ErrorCode::Efault; }
-        if (err & EINTR)  { ec = ec | ErrorCode::Eintr;  }
-        if (err & EMFILE) { ec = ec | ErrorCode::EmFile; }
-        if (err & ENFILE) { ec = ec | ErrorCode::EnFile; }
-        if (err && ec == 0) { ec = ec | ErrorCode::Unknown; }
+        bool first = true;
+        auto toOut = [&ss, ecm, &first](const auto err) {
+            if (ecm & err)
+            {
+                if (first)
+                {
+                    ss << err;
+                    first = false;
+                }
+                else
+                {
+                    ss << ", " << err;
+                }
+            }
+        };
 
-        return ec;
+        toOut(ErrorCode::EbadF);
+        toOut(ErrorCode::Eexist);
+        toOut(ErrorCode::Efault);
+        toOut(ErrorCode::Eintr);
+        toOut(ErrorCode::Einval);
+        toOut(ErrorCode::Eloop);
+        toOut(ErrorCode::EmFile);
+        toOut(ErrorCode::EnFile);
+        toOut(ErrorCode::EnoEnt);
+        toOut(ErrorCode::EnoMem);
+        toOut(ErrorCode::EnoSpc);
+        toOut(ErrorCode::Eperm);
+
+        return ss.str();
+    }
+
+    ErrorCode fromEpollError(u_int16_t err)
+    {
+        switch(err)
+        {
+            case 0: return ErrorCode::None;
+            case EBADF: return ErrorCode::EbadF;
+            case EEXIST: return ErrorCode::Eexist;
+            case EINVAL: return ErrorCode::Einval;
+            case ELOOP: return ErrorCode::Eloop;
+            case ENOENT: return ErrorCode::EnoEnt;
+            case ENOMEM: return ErrorCode::EnoMem;
+            case ENOSPC: return ErrorCode::EnoSpc;
+            case EPERM: return ErrorCode::Eperm;
+            case EFAULT: return ErrorCode::Efault;
+            case EINTR: return ErrorCode::Eintr;
+            case EMFILE: return ErrorCode::EmFile;
+            case ENFILE: return ErrorCode::EnFile;
+            default: return ErrorCode::Unknown;
+        }
     }
 
     ErrorCodeMask operator|(ErrorCodeMask mask, ErrorCode err)

@@ -1,35 +1,19 @@
 #include "Epoll.h"
+#include "EpollImpl.h"
 #include "Event.h"
 #include "Error.h"
-
-#include <algorithm>
-#include <asm-generic/errno-base.h>
-#include <cerrno>
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <epoll_wrapper/EpollImpl.h>
-#include <epoll_wrapper/Error.h>
-#include <exception>
-#include <optional>
-#include <ostream>
-#include <stdexcept>
-#include <sys/epoll.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <unordered_set>
 
 namespace epoll_wrapper
 {
 
     template <typename Epoll>
-    CreateAction<Epoll>::CreateAction(std::unique_ptr<Epoll> epoll, ErrorCodeMask errc)
+    CreateAction<Epoll>::CreateAction(std::unique_ptr<Epoll> epoll, ErrorCode errc)
     : mEpoll(std::move(epoll)), mErrc(errc) {};
 
     template <typename Epoll>
     bool CreateAction<Epoll>::hasError() const
     {
-        return mErrc;
+        return mErrc != ErrorCode::None;
     }
 
     template <typename Epoll>
@@ -39,7 +23,7 @@ namespace epoll_wrapper
     }
 
     template <typename Epoll>
-    ErrorCodeMask CreateAction<Epoll>::getError() const
+    ErrorCode CreateAction<Epoll>::getError() const
     {
         return mErrc;
     }
@@ -56,20 +40,20 @@ namespace epoll_wrapper
         return *mEpoll;
     }
 
-    CtlAction::CtlAction(ErrorCodeMask errc) : mErrc(errc) {};
+    CtlAction::CtlAction(ErrorCode errc) : mErrc(errc) {}
     
     bool CtlAction::hasError() const
     {
-        return mErrc;
+        return mErrc != ErrorCode::None;
     }
 
-    ErrorCodeMask CtlAction::getError() const
+    ErrorCode CtlAction::getError() const
     {
         return mErrc;
     }
 
     template <typename FdType>
-    WaitAction<FdType>::WaitAction(std::vector<std::pair<const FdType&, Event>>&& events, ErrorCodeMask errc)
+    WaitAction<FdType>::WaitAction(std::vector<std::pair<const FdType&, Event>>&& events, ErrorCode errc)
         : mEvents(std::move(events)), mErrc(errc) {}
 
     template <typename FdType>
@@ -81,11 +65,11 @@ namespace epoll_wrapper
     template <typename FdType>
     bool WaitAction<FdType>::hasError() const
     {
-        return mErrc;
+        return mErrc != ErrorCode::None;
     }
 
     template <typename FdType>
-    ErrorCodeMask WaitAction<FdType>::getError() const
+    ErrorCode WaitAction<FdType>::getError() const
     {
         return mErrc;
     }
@@ -103,10 +87,10 @@ namespace epoll_wrapper
         {
             return CreateAction<Epoll>
                 (std::unique_ptr<Epoll>(new EpollImpl(std::move(epollFd)))
-                , ErrorCode::None | ErrorCode::None);
+                , ErrorCode::None);
         }
 
-        return CreateAction<Epoll>(nullptr, ErrorCode::None | ErrorCode::Unknown);
+        return CreateAction<Epoll>(nullptr, fromEpollError(errno));
     }
 
     template <typename EpollType, typename FdType>
@@ -124,11 +108,11 @@ namespace epoll_wrapper
         std::vector<std::pair<const FdType&, Event>> eventVector;
         int i = 0;
 
-        ErrorCodeMask waErr = 0;
+        ErrorCode waErr{ErrorCode::None};
 
         if (resultCode < 0)
         {
-            waErr = waErr | fromEpollError(errno);
+            waErr = fromEpollError(errno);
         }
 
         while (i < resultCode)
@@ -144,9 +128,8 @@ namespace epoll_wrapper
             
             ++i;
         }
-
         
-        return WaitAction<FdType>{std::move(eventVector), ErrorCode::None | ErrorCode::None};
+        return WaitAction<FdType>{std::move(eventVector), waErr};
     }
 
     template <typename EpollType, typename FdType>
@@ -166,13 +149,20 @@ namespace epoll_wrapper
         
         auto res = mEpoll->epoll_ctl(EPOLL_CTL_ADD, fd, &event);
 
+        auto ec = ErrorCode::None;
         if (res == 0)
         {
             mRegisteredEvents.insert({fd, eventc});
             mRegisteredFds.insert({fd, fdObj});
+
+            auto ctl = CtlAction(ec);
+        }
+        else
+        {
+            ec = fromEpollError(errno);
         }
 
-        return CtlAction{fromEpollError(res)};
+        return CtlAction{ec};
     }
 
     template <typename EpollType, typename FdType>
@@ -188,7 +178,7 @@ namespace epoll_wrapper
 
         if (mRegisteredFds.find(fd) == mRegisteredFds.end())
         {
-            return CtlAction{ErrorCode::None | ErrorCode::EnoEnt};
+            return CtlAction{ErrorCode::EnoEnt};
         }
 
         struct epoll_event event;
@@ -200,9 +190,10 @@ namespace epoll_wrapper
         if (res == 0)
         {
             mRegisteredEvents[fd] = eventc;
+            return CtlAction{ErrorCode::None};
         }
 
-        return CtlAction{fromEpollError(res)};
+        return CtlAction{fromEpollError(errno)};
     }
 
     template <typename EpollType, typename FdType>
@@ -217,9 +208,10 @@ namespace epoll_wrapper
         {
             mRegisteredEvents.erase(fd);
             mRegisteredFds.erase(fd);
+            return CtlAction{ErrorCode::None};
         }
 
-        return CtlAction{fromEpollError(res)};
+        return CtlAction{fromEpollError(errno)};
     }
         
     template <typename EpollType, typename FdType>

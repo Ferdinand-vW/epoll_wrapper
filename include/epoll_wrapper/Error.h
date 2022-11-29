@@ -24,10 +24,11 @@ namespace epoll_wrapper
         };
 
     std::ostream& operator<<(std::ostream&, const ErrorCode&);
+    std::string errorMaskToString(const ErrorCodeMask& ecm);
 
     ErrorCodeMask operator|(ErrorCodeMask mask, ErrorCode err);
     ErrorCodeMask operator|(ErrorCode err1, ErrorCode err2);
     ErrorCodeMask operator&(ErrorCodeMask mask, ErrorCode err);
 
-    ErrorCodeMask fromEpollError(int errc);
+    ErrorCode fromEpollError(u_int16_t errc);
 }

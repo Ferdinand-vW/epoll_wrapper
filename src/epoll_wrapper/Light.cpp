@@ -16,7 +16,7 @@ namespace epoll_wrapper
 
     std::unique_ptr<Light> Light::epoll_create(int size)
     {
-        int epollFd = ::epoll_create(size);
+        int epollFd = ::epoll_create1(0);
 
         return std::unique_ptr<Light>(new Light(epollFd));
     }

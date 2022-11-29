@@ -35,12 +35,11 @@ namespace epoll_wrapper
     struct Event
     {
         EventCodeMask mEvents;
-        ErrorCodeMask mErrors;
+        ErrorCode mError;
         epoll_data_t mData;
         uint32_t mFd;
     };
 
-    // int fromEvent(const EventCode& events);
     int toEpollEvent(EventCodeMask event);
     EventCodeMask fromEpollEvent(int eventc);
 }
