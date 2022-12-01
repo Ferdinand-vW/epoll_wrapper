@@ -96,7 +96,7 @@ namespace epoll_wrapper
         int32_t mTimeout{-1};
         // uint32_t is the underlying file descriptor
         std::unordered_map<uint32_t, EventCodeMask> mRegisteredEvents;
-        std::unordered_map<uint32_t, const FdType&> mRegisteredFds;
+        std::unordered_map<uint32_t, FdType> mRegisteredFds;
         struct epoll_event mEvents[MAXEVENTS];
 
         std::unique_ptr<EpollType> mEpoll;
