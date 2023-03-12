@@ -32,3 +32,8 @@ namespace epoll_wrapper
 
     ErrorCode fromEpollError(u_int16_t errc);
 }
+
+namespace std
+{
+    std::string to_string(epoll_wrapper::ErrorCode c);
+}
