@@ -85,7 +85,7 @@ namespace epoll_wrapper
         CtlAction erase(const FdType& fd);
         void close();
 
-        const EpollType& getUnderlying() const;
+        EpollType& getUnderlying() const;
         bool hasFd(uint32_t fd) const;
         const FdType& getFd(uint32_t fd) const;
         const EventCodeMask getEvents(const FdType &fd) const;

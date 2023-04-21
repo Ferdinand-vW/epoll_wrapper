@@ -215,7 +215,7 @@ namespace epoll_wrapper
     }
         
     template <typename EpollType, typename FdType>
-    const EpollType& EpollImpl<EpollType, FdType>::getUnderlying() const
+    EpollType& EpollImpl<EpollType, FdType>::getUnderlying() const
     {
         return *mEpoll;
     }
