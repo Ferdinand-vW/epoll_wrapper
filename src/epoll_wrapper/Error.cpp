@@ -107,7 +107,7 @@ std::string to_string(epoll_wrapper::ErrorCode c)
     switch (c)
     {
     case ErrorCode::None:
-        return "NONE";
+        return "";
         break;
     case ErrorCode::Unknown:
         return "UNKNOWN";
